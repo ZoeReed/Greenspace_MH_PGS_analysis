@@ -1,7 +1,7 @@
 ######################################
 ##Script to extract variables needed from main UKBB datatset for MR
 #The syntax was created by Zoe E Reed.
-#The syntax was checked by ....
+#The syntax was checked by Tim T. Morris
 #R Version 3.6.2
 #The code below shows all manipulations and recodes with annotations
 

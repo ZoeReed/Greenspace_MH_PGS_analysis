@@ -1,7 +1,7 @@
 ######################################
 ##Script to match percentage greenspace dataset to area level variables
 #The syntax was created by Zoe E Reed.
-#The syntax was checked by ....
+#The syntax was checked by Gareth J. Griffith
 #R Version 3.6.2
 #The code below shows all manipulations and recodes with annotations
 

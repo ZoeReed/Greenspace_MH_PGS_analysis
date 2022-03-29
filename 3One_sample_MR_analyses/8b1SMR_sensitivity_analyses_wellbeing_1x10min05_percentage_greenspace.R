@@ -1,7 +1,7 @@
 ######################################
 ##Script to conduct onne sample MR sensitivity analyses (IVW, MR-Egger and LADreg) for wellbeing (1x10-05) and percentage greenspace
 #The syntax was created by Zoe E Reed.
-#The syntax was checked by ....
+#The syntax was checked by Tim T. Morris
 #R Version 3.6.2
 #The code below shows all manipulations and recodes with annotations
 

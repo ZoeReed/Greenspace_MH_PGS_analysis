@@ -12,7 +12,7 @@
 #----------------------------------
 #Script to extract SNPs for risk scores
 #The syntax was created by Zoe E Reed.
-#The syntax was checked by ....
+#The syntax was checked by Tim T. Morris
 #----------------------------------
 
 #----------------------------------

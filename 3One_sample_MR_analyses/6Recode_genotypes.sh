@@ -12,7 +12,7 @@
 #----------------------------------
 #Script to recode SNPs to genotype
 #The syntax was created by Zoe E Reed.
-#The syntax was checked by ....
+#The syntax was checked by Tim T. Morris
 #----------------------------------
 
 #----------------------------------

@@ -2,7 +2,7 @@
 ######################################
 ##Script to obtain R squared for wellbeing PGS and phenotypic analyses
 #The syntax was created by Zoe E Reed.
-#The syntax was checked by ....
+#The syntax was checked by Tim T. Morris
 #R Version 3.6.2
 #The code below shows all manipulations and recodes with annotations
 

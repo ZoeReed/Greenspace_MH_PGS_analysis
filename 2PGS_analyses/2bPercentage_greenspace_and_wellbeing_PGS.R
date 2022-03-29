@@ -1,7 +1,7 @@
 ######################################
 ##Script to test association between wellbeing PGS (at multiple thresholds) and percentage greenspace
 #The syntax was created by Zoe E Reed.
-#The syntax was checked by ....
+#The syntax was checked by Gareth J. Griffith
 #R Version 3.5.1
 #The code below shows all manipulations and recodes with annotations
 
