@@ -1,24 +1,28 @@
 # Greenspace_MH_PGS_analysis
-Code to run greenspace and mental health PGS analyses
+In this study we investigated the extent to which confounding via geography may have an impact on analyses including polygenic indicators of mental health by considering within-area and contextual effects. We conducted observational and polygenic risk score analyses using UK Biobank data.
 
-For 1Data_preparation:  
-- Script 1 is selecting variables of interest from the main UK Biobank dataset  
-- Scripts 2a and 2b are for merging in the two greenspace measures (NDVI and percentage greenspace)  
-- Scripts 3a and 3b are for matching to the area level variables (neighbourhood and district)  
-- Script 4 produces maps for supplementary figure (maps of UK Biobank participants per area)  
-- Script 5 obtains the R squared for Principal components and produces a plot of this for supplementary figure  
+Details of how to access these data can be found in the corresponding paper.
 
-For 2PGS_analyses:  
-- Scripts 1a-1b create PGS for depression, wellbeing and schizophrenia  
-- Scripts 2a-2c run the models (including multilevel models) for the depression, wellbeing and schizophrenia PGS and greenspace outcomes (NDVI and percentage greenspace  
+The repository includes the following files in the following folders:
 
-For 3One_sample_MR_analyses:  
-- Script 1 extracts the relevant phenotypic data related to depression, wellbeing and schizophrenia from the main UKBB dataset  
-- Scripts 2a-2c create the PGS to use in one-sample MR  
-- Scripts 3a-3c check the R squared for the PGS for relevant phenotypes and also includes phenotypic analyses  
-- Scripts 4a-4c conduct one-sample MR main analyses  
-- Script 5 extracts relevant SNP information for UKBB participants for use in one-sample MR sensitivity analyses  
-- Script 6 recodes the genotypes for these SNPs  
-- Scripts 7a-7c format the data needed for one-sample MR analyses  
-- Scripts 8a-8c conduct one-sample MR sensitivity analyses  
-- Script ExactQ.R is a script containing functions for use in scripts 8a-8c  
+For 1Data_preparation:
+Script 1 is selecting variables of interest from the main UK Biobank dataset
+Script 2 is merging in greenspace measures into a single data frame (NDVI and percentage greenspace)
+Script 3 is matching to the area level variables
+Script 4 produces a map for a supplementary figure (map of UK Biobank participants per area)
+Script 5 obtains the R squared for Principal components and produces a plot of this for a supplementary figure
+Script 6 extracts the relevant phenotypic data related to depression, wellbeing and schizophrenia from the main UKBB dataset
+
+For 2PGS_analyses:
+Scripts 1a-1c create PGS for depression, wellbeing and schizophrenia
+Scripts 2a-2c run the phenotypic models for the depression, wellbeing and schizophrenia phenotypes and greenspace outcomes (NDVI and percentage greenspace)
+Scripts 2a-2c run the models (including multilevel models) for the depression, wellbeing and schizophrenia PGS and greenspace outcomes (NDVI and percentage greenspace)
+
+
+PRS were created using this pipeline: https://github.com/sean-harrison-bristol/UK_Biobank_PRS/tree/master.
+
+Syntax files can be opened as text files, but are only usable in R.
+
+Currently (June 2025) R software can be downloaded for free here:
+
+https://www.r-project.org/
