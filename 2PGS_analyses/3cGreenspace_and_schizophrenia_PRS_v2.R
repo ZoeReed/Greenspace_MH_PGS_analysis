@@ -1,0 +1,372 @@
+######################################
+##Script to test the association between the Schizophrenia PRS (at multiple thresholds) and the Greenspace variable
+#The syntax was created by Zoe E Reed.
+#The syntax was checked by Gareth J. Griffith
+#R Version 3.6.2
+#The code below shows all manipulations and recodes with annotations
+
+######################################
+#Load libraries
+######################################
+
+library(data.table)
+library(plyr)
+library(dplyr)
+library(lme4)
+library(ggplot2)
+library(rgeos)
+library(sp)
+library(rgdal)
+library(raster)
+library(RColorBrewer)
+library(ggplot2)
+library(stringr)
+
+######################################
+#Load data and format
+######################################
+
+#Load data
+load("/path/greenspace_biobank_final_census_20240904.RData")
+
+#Load PCs data and match
+pcs<-read.table("/path/data.pca1-40.plink.txt")
+colnames(pcs)<-c("IID", "FID", "PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7", "PC8", "PC9", "PC10", "PC11", "PC12", "PC13", "PC14", "PC15", "PC16", "PC17", "PC18", "PC19", "PC20", "PC21", "PC22", "PC23", "PC24", "PC25", "PC26", "PC27", "PC28", "PC29", "PC30", "PC31", "PC32", "PC33", "PC34", "PC35", "PC36", "PC37", "PC38", "PC39", "PC40")
+vars<-c("IID", "PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7", "PC8", "PC9", "PC10", "PC11", "PC12", "PC13", "PC14", "PC15", "PC16", "PC17", "PC18", "PC19", "PC20", "PC21", "PC22", "PC23", "PC24", "PC25")
+pcs<-pcs[,vars]
+
+common.samples<-intersect(as.character(data$IID), as.character(pcs$IID))
+data<-data[match(common.samples, data$IID),]
+pcs<-pcs[match(common.samples, pcs$IID),]
+data2<-left_join(data, pcs, by="IID")
+
+#Load PRS data
+polygenic_risk_score_5e8<-read.csv("/path/grs_scz_5e8.csv")
+polygenic_risk_score_000001<-read.csv("/path/grs_scz_000001.csv")
+polygenic_risk_score_00001<-read.csv("/path/grs_scz_00001.csv")
+polygenic_risk_score_0001<-read.csv("/path/grs_scz_0001.csv")
+polygenic_risk_score_001<-read.csv("/path/grs_scz_001.csv")
+polygenic_risk_score_01<-read.csv("/path/grs_scz_01.csv")
+polygenic_risk_score_05<-read.csv("/path/grs_scz_05.csv")
+polygenic_risk_score_1<-read.csv("/path/grs_scz_1.csv")
+polygenic_risk_score_2<-read.csv("/path/grs_scz_2.csv")
+polygenic_risk_score_3<-read.csv("/path/grs_scz_3.csv")
+polygenic_risk_score_4<-read.csv("/path/grs_scz_4.csv")
+polygenic_risk_score_5<-read.csv("/path/grs_scz_5.csv")
+
+#Standardise scores
+polygenic_risk_score_5e8$z_risk_score<-scale(polygenic_risk_score_5e8$grs, center=T, scale=T)
+polygenic_risk_score_000001$z_risk_score<-scale(polygenic_risk_score_000001$grs, center=T, scale=T)
+polygenic_risk_score_00001$z_risk_score<-scale(polygenic_risk_score_00001$grs, center=T, scale=T)
+polygenic_risk_score_0001$z_risk_score<-scale(polygenic_risk_score_0001$grs, center=T, scale=T)
+polygenic_risk_score_001$z_risk_score<-scale(polygenic_risk_score_001$grs, center=T, scale=T)
+polygenic_risk_score_01$z_risk_score<-scale(polygenic_risk_score_01$grs, center=T, scale=T)
+polygenic_risk_score_05$z_risk_score<-scale(polygenic_risk_score_05$grs, center=T, scale=T)
+polygenic_risk_score_1$z_risk_score<-scale(polygenic_risk_score_1$grs, center=T, scale=T)
+polygenic_risk_score_2$z_risk_score<-scale(polygenic_risk_score_2$grs, center=T, scale=T)
+polygenic_risk_score_3$z_risk_score<-scale(polygenic_risk_score_3$grs, center=T, scale=T)
+polygenic_risk_score_4$z_risk_score<-scale(polygenic_risk_score_4$grs, center=T, scale=T)
+polygenic_risk_score_5$z_risk_score<-scale(polygenic_risk_score_5$grs, center=T, scale=T)
+
+#Remove exclusions for genetic data
+rec_exc<-read.table("/path/data.combined_recommended.qctools.txt", header=F)
+data2<-data2[!(data2$IID %in% rec_exc$V1), ]
+dim(data2)
+
+high_rel<-read.csv("/path/data.highly_relateds.qctools.txt", header=F)
+data2<-data2[!(data2$IID %in% high_rel$V1), ]
+dim(data2)
+
+min_rel<-read.csv("/path/data.minimal_relateds.qctools.txt", header=F)
+data2<-data2[!(data2$IID %in% min_rel$V1), ]
+dim(data2)
+
+non_white_brit<-read.csv("/path/data.non_white_british.qctools.txt", header=F)
+data2<-data2[!(data2$IID %in% non_white_brit$V1), ]
+dim(data2)
+
+data2<-data2[!(is.na(data2$greenspace_percent_300m)), ]
+dim(data2)
+
+#Standardise variable
+data2$greenspace_percent_300m<-scale(data2$greenspace_percent_300m, center=T, scale=T)
+
+#Match to phenotypic dataset
+common.samples<-intersect(as.character(data2$IID), as.character(polygenic_risk_score_5$id))
+data2<-data2[match(common.samples, data2$IID),]
+
+polygenic_risk_score_5e8<-polygenic_risk_score_5e8[match(common.samples, polygenic_risk_score_5e8$id),]
+polygenic_risk_score_000001<-polygenic_risk_score_000001[match(common.samples, polygenic_risk_score_000001$id),]
+polygenic_risk_score_00001<-polygenic_risk_score_00001[match(common.samples, polygenic_risk_score_00001$id),]
+polygenic_risk_score_0001<-polygenic_risk_score_0001[match(common.samples, polygenic_risk_score_0001$id),]
+polygenic_risk_score_001<-polygenic_risk_score_001[match(common.samples, polygenic_risk_score_001$id),]
+polygenic_risk_score_01<-polygenic_risk_score_01[match(common.samples, polygenic_risk_score_01$id),]
+polygenic_risk_score_05<-polygenic_risk_score_05[match(common.samples, polygenic_risk_score_05$id),]
+polygenic_risk_score_1<-polygenic_risk_score_1[match(common.samples, polygenic_risk_score_1$id),]
+polygenic_risk_score_2<-polygenic_risk_score_2[match(common.samples, polygenic_risk_score_2$id),]
+polygenic_risk_score_3<-polygenic_risk_score_3[match(common.samples, polygenic_risk_score_3$id),]
+polygenic_risk_score_4<-polygenic_risk_score_4[match(common.samples, polygenic_risk_score_4$id),]
+polygenic_risk_score_5<-polygenic_risk_score_5[match(common.samples, polygenic_risk_score_5$id),]
+
+scores<-list(polygenic_risk_score_5e8, polygenic_risk_score_000001, polygenic_risk_score_00001, polygenic_risk_score_0001, polygenic_risk_score_001, polygenic_risk_score_01, polygenic_risk_score_05, polygenic_risk_score_1, polygenic_risk_score_2, polygenic_risk_score_3, polygenic_risk_score_4, polygenic_risk_score_5)
+
+names(scores)<-c("polygenic_score_5e8", "polygenic_score_000001", "polygenic_score_00001", "polygenic_score_0001", "polygenic_score_001", "polygenic_score_01", "polygenic_score_05", "polygenic_score_1", "polygenic_score_2", "polygenic_score_3", "polygenic_score_4", "polygenic_score_5")
+
+######################################
+#Analyses
+######################################
+
+Greenspace_Scz_PRS_lm_results<-list()
+i<-0
+
+for(risk_score in scores){
+	i<-i+1
+	tmp_data<-merge(data2, risk_score[,c("id", "z_risk_score")], by.x="IID", by.y="id")
+	greenspace_agg<-tmp_data %>% group_by(census_msoa) %>% 
+	summarise_at(vars(sex, age, greenspace_percent_300m, z_risk_score, PC1, PC2, PC3, PC4, PC5,PC6, PC7, PC8, PC9, PC10, PC11, PC12, PC13, PC14, PC15, PC16, PC17, PC18, PC19, PC20, PC21, PC22, PC23, PC24, PC25), list(mean=mean))
+	greenspace_edited <- left_join(tmp_data, greenspace_agg[c("census_msoa","z_risk_score_mean")])
+	#List variables for model specs
+	outcome <- "greenspace_percent_300m"
+	exposure <- "z_risk_score"
+	mundlak_exp <- "z_risk_score_mean"
+	confs <- c("sex", "age", "PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7", "PC8", "PC9", "PC10", "PC11", "PC12", "PC13", "PC14", "PC15", "PC16", "PC17", "PC18", "PC19", "PC20", "PC21", "PC22", "PC23", "PC24", "PC25")
+	re <- "(1|census_msoa)"
+	summ_lm <- glm(as.formula(paste(outcome,
+									paste(c(exposure,
+                                    		confs),
+                                    	collapse = " + "),
+                                	sep="~")),
+               		data=greenspace_edited)
+    modelb<-lm(greenspace_percent_300m ~ z_risk_score, data=greenspace_edited)
+	rsq<-summary(modelb)$r.squared
+	new<-as.data.frame(rsq)
+	new$score<-names(scores[i])
+	new$beta<-summary(summ_lm)$coefficients[2,1]
+	new$p<-summary(summ_lm)$coefficients[2,4]
+	new$Lower_CI<-confint.default(summ_lm)[2,1]
+	new$Upper_CI<-confint.default(summ_lm)[2,2]
+	new$N<-nobs(summ_lm)
+	Greenspace_Scz_PRS_lm_results<-rbind(Greenspace_Scz_PRS_lm_results, new)
+	}
+
+write.csv(Greenspace_Scz_PRS_lm_results, file="/path/Greenspace_Scz_PRS_results_lm.csv", row.names=F, quote=F)
+
+#MSOA with Mundlak formula
+rm(tmp_data)
+rm(greenspace_edited)
+rm(greenspace_agg)
+rm(outcome)
+rm(exposure)
+rm(mundlak_exp)
+rm(confs)
+
+Greenspace_Scz_PRS_msoa_results_mundlak_risk_score<-list()
+Greenspace_Scz_PRS_msoa_results_mundlak_risk_score_mean<-list()
+i<-0
+
+for(risk_score in scores){
+	i<-i+1
+	tmp_data<-merge(data2, risk_score[,c("id", "z_risk_score")], by.x="IID", by.y="id")
+	greenspace_agg<-tmp_data %>% group_by(census_msoa) %>% 
+	summarise_at(vars(sex, age, greenspace_percent_300m, z_risk_score, PC1, PC2, PC3, PC4, PC5,PC6, PC7, PC8, PC9, PC10, PC11, PC12, PC13, PC14, PC15, PC16, PC17, PC18, PC19, PC20, PC21, PC22, PC23, PC24, PC25), list(mean=mean))
+	greenspace_edited <- left_join(tmp_data, greenspace_agg[c("census_msoa","z_risk_score_mean")])
+	#List variables for model specs
+	outcome <- "greenspace_percent_300m"
+	exposure <- "z_risk_score"
+	mundlak_exp <- "z_risk_score_mean"
+	confs <- c("sex", "age", "PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7", "PC8", "PC9", "PC10", "PC11", "PC12", "PC13", "PC14", "PC15", "PC16", "PC17", "PC18", "PC19", "PC20", "PC21", "PC22", "PC23", "PC24", "PC25")
+	re <- "(1|census_msoa)"
+	summ_lm <- lmer(as.formula(paste(outcome,
+									paste(c(exposure,
+											mundlak_exp,
+                                    		confs,
+                                    		re),
+                                    	collapse = " + "),
+                                	sep="~")),
+               		data=greenspace_edited)
+    modelb<-lm(greenspace_percent_300m ~ z_risk_score, data=greenspace_edited)
+	N<-nobs(summ_lm)
+	new<-as.data.frame(N)
+	new$score<-names(scores[i])
+	new$beta<-summary(summ_lm)$coefficients[2,1]
+	new$t<-summary(summ_lm)$coefficients[2,3]
+	new$SE<-summary(summ_lm)$coefficients[2,2]
+	new$Lower_CI<-new$beta-(1.96*new$SE)
+	new$Upper_CI<-new$beta+(1.96*new$SE)
+	coefs<-data.frame(coef(summary(summ_lm)))
+	new$p<-2*(1-pnorm(abs(coefs$t.value[2])))
+	new2<-as.data.frame(N)
+	new2$score<-names(scores[i])
+	new2$beta<-summary(summ_lm)$coefficients[3,1]
+	new2$t<-summary(summ_lm)$coefficients[3,3]
+	new2$SE<-summary(summ_lm)$coefficients[3,2]
+	new2$Lower_CI<-new2$beta-(1.96*new2$SE)
+	new2$Upper_CI<-new2$beta+(1.96*new2$SE)
+	coefs2<-data.frame(coef(summary(summ_lm)))
+	new2$p<-2*(1-pnorm(abs(coefs2$t.value[3])))
+	Greenspace_Scz_PRS_msoa_results_mundlak_risk_score<-rbind(Greenspace_Scz_PRS_msoa_results_mundlak_risk_score, new)
+	Greenspace_Scz_PRS_msoa_results_mundlak_risk_score_mean<-rbind(Greenspace_Scz_PRS_msoa_results_mundlak_risk_score_mean, new2)
+}
+
+write.csv(Greenspace_Scz_PRS_msoa_results_mundlak_risk_score, file="/path/Greenspace_Scz_PRS_MSOA_results_Mundlak_risk_score.csv", row.names=F, quote=F)
+
+write.csv(Greenspace_Scz_PRS_msoa_results_mundlak_risk_score_mean, file="/path/Greenspace_Scz_PRS_MSOA_results_Mundlak_risk_score_mean.csv", row.names=F, quote=F)
+
+######################################
+#Catepillar plot - data preparation
+######################################
+
+#Mundlak for p5e8
+tmp_data<-merge(data2, polygenic_risk_score_5e8[,c("id", "z_risk_score")], by.x="IID", by.y="id")
+greenspace_agg<-tmp_data %>% group_by(census_msoa) %>% 
+summarise_at(vars(sex, age, greenspace_percent_300m, z_risk_score, PC1, PC2, PC3, PC4, PC5,PC6, PC7, PC8, PC9, PC10, PC11, PC12, PC13, PC14, PC15, PC16, PC17, PC18, PC19, PC20, PC21, PC22, PC23, PC24, PC25), list(mean=mean))
+greenspace_edited <- left_join(tmp_data, greenspace_agg[c("census_msoa","z_risk_score_mean")])
+
+#List variables for model
+outcome <- "greenspace_percent_300m"
+exposure <- "z_risk_score"
+mundlak_exp <- "z_risk_score_mean"
+confs <- c("sex", "age", "PC1", "PC2", "PC3", "PC4", "PC5", "PC6", "PC7", "PC8", "PC9", "PC10", "PC11", "PC12", "PC13", "PC14", "PC15", "PC16", "PC17", "PC18", "PC19", "PC20", "PC21", "PC22", "PC23", "PC24", "PC25")
+re <- "(1|census_msoa)"
+p5e8_summ_lm <- lmer(as.formula(paste(outcome,
+								paste(c(exposure,
+										mundlak_exp,
+                                    		confs,
+                                    		re),
+                                    	collapse = " + "),
+                                	sep="~")),
+               		data=greenspace_edited)
+
+#Obtain modelled level 2 residuals
+p5e8_u0 <- ranef(p5e8_summ_lm, condVar = TRUE) #extract level 2 residuals
+
+#Calculate SE for them
+p5e8_u0se <- sqrt(attr(p5e8_u0[[1]], "postVar")[1,,])
+
+#List nhoods (number of MSOAs)
+p5e8_nhoodid <- rownames(p5e8_u0[[1]])
+ 
+#Create a u0tab dataframe
+p5e8_u0tab <- cbind(p5e8_nhoodid, p5e8_u0[[1]], p5e8_u0se)
+ 
+#Rename columns
+colnames(p5e8_u0tab) <- c("p5e8_nhoodid", "p5e8_u0", "p5e8_u0se")
+
+#Sort by values of u0
+p5e8_u0tab <- p5e8_u0tab[order(p5e8_u0tab$p5e8_u0), ]
+
+#New column of ranks
+p5e8_u0tab <- cbind(p5e8_u0tab, c(1:dim(p5e8_u0tab)[1]))
+
+#Name the rank column
+colnames(p5e8_u0tab)[4] <- "u0rank"
+
+#Top and bottom 10
+p5e8_top10 <- p5e8_u0tab[1:10, ]
+p5e8_bottom10 <- tail(p5e8_u0tab, 10)
+
+#Merge and save
+p5e8_resid <- rbind(p5e8_top10, p5e8_bottom10)
+
+p5e8_resid$LCI <- p5e8_resid$p5e8_u0 - (1.96*p5e8_resid$p5e8_u0se)
+p5e8_resid$UCI <- p5e8_resid$p5e8_u0 + (1.96*p5e8_resid$p5e8_u0se)
+
+write.csv(p5e8_resid, file="/path/Greenspace_Scz_resid_Mundlak_p5e8.csv", row.names=F, quote=F)
+
+#Plot for top 10 and bottom 10
+
+#Convert neighborhood ID to a factor ordered by rank
+p5e8_resid$p5e8_nhoodid <- factor(p5e8_resid$p5e8_nhoodid, levels = p5e8_resid$p5e8_nhoodid[order(p5e8_resid$u0rank)])
+
+p5e8_resid <- p5e8_resid %>%
+  mutate(color = ifelse(u0rank <= 10, "royalblue", "firebrick"))  # Assign colors based on u0rank
+
+p5e8_nhoodid<-p5e8_resid$p5e8_nhoodid
+
+MSOAs<-c("Parsons Green West", "Forest Hill East", "Langley Park", "Corbett Estate", "Chelsea Riverside East", "West Thornton South & Ampere Way", "Brackenbury", "North Cheam East", "Fitzrovia West & Soho", "Stoneleigh & Auriol", "Islip, Arncott & Chesterton", "Evercreech & Nunney", "Kingston Bagpuize & East Hanney", "Gawsworth & Macclesfield Forest", "Chapel-en-le-Frith & Hope Valley", " Chinnor & Tetsworth", "Ipstones, Warslow & Hamps Valley", "Esk Valley & Runswick Coast", "Wymeswold, Rearsby & Cossington", "Sutton Benger, Kington & Biddestone")
+
+p5e8_resid$p5e8_nhoodid<-MSOAs
+
+p5e8_resid$p5e8_nhoodid <- factor(p5e8_resid$p5e8_nhoodid, levels = p5e8_resid$p5e8_nhoodid[order(p5e8_resid$u0rank)])
+
+#Plot
+fp <- ggplot(p5e8_resid, aes(x = p5e8_nhoodid, y = p5e8_u0)) +
+  geom_point(aes(color = color), size = 3) + 
+  geom_errorbar(aes(ymin = LCI, ymax = UCI), width = 0.2, color = p5e8_resid$color, linewidth=0.5) + 
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 1) + 
+  scale_x_discrete(
+    labels = function(x) str_wrap(x, width = 20)
+  ) +
+  theme_minimal() +
+  labs(
+    x = "MSOA rank",
+    y = "Modelled level 2 residuals"
+  ) +
+  scale_color_identity(guide = "legend", breaks = c("blue", "red"), labels = c("u0rank <= 10", "u0rank > 10")) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size=8)
+  )
+
+ggsave("/path/Caterpillar_plot.png", fp, width = 12, height = 6, dpi = 300, bg = "white")
+
+msoa_map<-readOGR("/path/Census_MSOA.shp", layer="Census_MSOA")
+
+msoa <- msoa_map
+
+#Set colours
+nhood_colours <- ifelse(p5e8_resid$u0rank <= 10, "royalblue", "firebrick")
+names(nhood_colours) <- p5e8_resid$p5e8_nhoodid
+
+#Merge data with MSOA shapefile
+msoa@data <- msoa@data %>%
+  left_join(p5e8_resid, by = c("msoa11cd" = "p5e8_nhoodid")) %>%
+  mutate(colour = ifelse(is.na(p5e8_u0), "#FFFFFF", nhood_colours[msoa11cd]))
+
+#Filter centroids for the 20 neighborhoods in p5e8_resid
+msoa <- msoa[!is.na(msoa@data$p5e8_u0), ]
+centroids <- as.data.frame(coordinates(msoa))
+colnames(centroids) <- c("Longitude", "Latitude")
+centroids$colour <- msoa@data$colour
+
+#Add forest plot neighborhoods as points
+png("/path/MSOA_map_residuals.png", 
+    width = 1500, height = 2000)
+
+plot(msoa_map, border="grey", col="white")
+
+points(centroids$Longitude, centroids$Latitude, col = centroids$colour, pch = 19, cex = 3)
+
+dev.off()
+
+#Plot for all
+#Convert neighborhood ID to a factor ordered by rank
+p5e8_u0tab$p5e8_nhoodid <- factor(p5e8_u0tab$p5e8_nhoodid, levels = p5e8_u0tab$p5e8_nhoodid[order(p5e8_u0tab$u0rank)])
+
+p5e8_u0tab$LCI <- p5e8_u0tab$p5e8_u0 - (1.96*p5e8_u0tab$p5e8_u0se)
+p5e8_u0tab$UCI <- p5e8_u0tab$p5e8_u0 + (1.96*p5e8_u0tab$p5e8_u0se)
+
+p5e8_u0tab <- p5e8_u0tab %>%
+  mutate(color = case_when(
+    u0rank <= 10 ~ "royalblue",
+    u0rank > (max(u0rank) - 10) ~ "firebrick",
+    TRUE ~ "grey"
+	))
+  
+#Plot
+fp <- ggplot(p5e8_u0tab, aes(x = p5e8_nhoodid, y = p5e8_u0)) +
+  geom_errorbar(aes(ymin = LCI, ymax = UCI, color = color), width = 0.1, linewidth=0.5) +
+  geom_point(aes(color = "black"), size = 2, alpha=1) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 1) + 
+  labs(
+    x = "MSOA rank",
+    y = "Modelled level 2 residual"
+  ) +
+  scale_color_identity(guide = "legend", breaks = c("blue", "red"), labels = c("u0rank <= 10", "u0rank > 10")) +
+  theme(
+  	axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    plot.background = element_rect(fill = "white"),
+  )
+
+ggsave("/path/Caterpillar_plot_all.png", fp, width = 12, height = 5, dpi = 300, bg = "white")
+
