@@ -18,6 +18,8 @@ Scripts 1a-1c create PGS for depression, wellbeing and schizophrenia
 Scripts 2a-2c run the phenotypic models for the depression, wellbeing and schizophrenia phenotypes and greenspace outcomes (NDVI and percentage greenspace)
 Scripts 2a-2c run the models (including multilevel models) for the depression, wellbeing and schizophrenia PGS and greenspace outcomes (NDVI and percentage greenspace)
 
+For 3Fig_generation:
+Script fig_generation.R is used to create the plots included as figures in the manuscript
 
 PRS were created using this pipeline: https://github.com/sean-harrison-bristol/UK_Biobank_PRS/tree/master.
 
